@@ -1,8 +1,8 @@
 """Unit tests for the Tuya BLE config flow and options flow."""
+# pylint: disable=protected-access
 
 # cspell:ignore dbca
 
-# pylint: disable=protected-access
 from __future__ import annotations
 
 import hashlib
@@ -31,6 +31,10 @@ from custom_components.tuya_ble.const import (
 from custom_components.tuya_ble.tuya_ble import SERVICE_UUID, TuyaBLEDeviceCredentials
 from custom_components.tuya_ble.tuya_ble.const import MANUFACTURER_DATA_ID
 from tests.conftest import FakeAdvertisementData
+
+_SCAN_PATCH = (
+    "custom_components.tuya_ble.config_flow.bluetooth.async_process_advertisements"
+)
 
 
 class FakeLogin:
@@ -99,9 +103,11 @@ class FakeDiscovery:
         address: str = "AA:BB:CC:DD:EE:FF",
         name: str = "FakeDevice",
         with_service: bool = True,
+        rssi: int = -50,
     ) -> None:
         self.address = address
         self.name = name
+        self.rssi = rssi
         self.service_data: dict[str, bytes] | None = (
             {SERVICE_UUID: b"\x00prod"} if with_service else None
         )
