@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -40,6 +41,7 @@ class TuyaBLECoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device = device
         self._disconnected: bool = True
         self._unsub_disconnect: CALLBACK_TYPE | None = None
+        self._status_task: asyncio.Task[None] | None = None
         self._dp_classification: tuple[bool, frozenset[int]] | None = None
         self._reported_unmapped: dict[int, tuple[str, bytes]] = {}
         device.register_connected_callback(self._async_handle_connect)
@@ -47,10 +49,13 @@ class TuyaBLECoordinator(DataUpdateCoordinator[dict[str, Any]]):
         device.register_disconnected_callback(self._async_handle_disconnect)
 
     async def async_shutdown(self) -> None:
-        """Cancel any pending disconnect timer on teardown."""
+        """Cancel any pending disconnect timer or status request on teardown."""
         if self._unsub_disconnect is not None:
             self._unsub_disconnect()
             self._unsub_disconnect = None
+        if self._status_task is not None:
+            self._status_task.cancel()
+            self._status_task = None
         await super().async_shutdown()
 
     @property
@@ -65,7 +70,44 @@ class TuyaBLECoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._disconnected:
             self._disconnected = False
             _LOGGER.debug("%s: Connected", self.device.address)
+            self._async_request_status()
             self.async_update_listeners()
+
+    @callback
+    def _async_request_status(self) -> None:
+        """Ask a freshly connected device for the data points it holds.
+
+        Devices only push what changes, so a reconnected device would keep the
+        values of the previous session until something moves. Requesting the
+        full status once per connection makes the entities reflect the device
+        as it actually is; entities that opt into restore cover the short window
+        before the answer arrives.
+        """
+        _LOGGER.debug("%s: Requesting device status", self.device.address)
+        if self._status_task is not None:
+            self._status_task.cancel()
+        self._status_task = self.hass.async_create_task(self.device.update())
+        self._status_task.add_done_callback(self._async_status_request_done)
+
+    @callback
+    def _async_status_request_done(self, task: asyncio.Task[None]) -> None:
+        """Consume the result of a status request.
+
+        A request that fails on a transient BLE drop has already been logged
+        with its traceback by the protocol layer; retrieving the exception here
+        keeps the task from reporting it a second time as an unretrieved
+        exception.
+        """
+        if task.cancelled():
+            return
+        if (exception := task.exception()) is None:
+            return
+        _LOGGER.debug(
+            "%s: Status request failed: %s: %s",
+            self.device.address,
+            type(exception).__name__,
+            exception,
+        )
 
     @callback
     def _async_handle_update(self, updates: list[TuyaBLEDataPoint]) -> None:

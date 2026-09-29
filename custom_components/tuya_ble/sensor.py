@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import logging
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -23,6 +25,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import ExtraStoredData
 
 from .const import (
     DOMAIN,
@@ -32,10 +35,18 @@ from .device_registry import (
     EntityDescriptor,
     get_registry,
 )
-from .devices import TuyaBLECoordinator, TuyaBLEData, TuyaBLEEntity, TuyaBLEProductInfo
+from .devices import (
+    TuyaBLECoordinator,
+    TuyaBLEData,
+    TuyaBLEProductInfo,
+    TuyaBLERestoreEntity,
+)
 from .tuya_ble import TuyaBLEDataPoint, TuyaBLEDataPointType, TuyaBLEDevice
 
+_LOGGER = logging.getLogger(__name__)
+
 SIGNAL_STRENGTH_DP_ID = -1
+
 
 ICON_BATTERY = "mdi:battery"
 ICON_BATTERY_CHECK = "mdi:battery-check"
@@ -56,12 +67,36 @@ TuyaBLESensorIsAvailable = Callable[["TuyaBLESensor", TuyaBLEProductInfo], bool]
 
 
 @dataclass
+class SensorRestoreData(ExtraStoredData):
+    """Extra restore data holding the last native value of a sensor.
+
+    Only the value is stored: the unit comes from the entity description, so a
+    stored unit from an older configuration cannot leak into a changed one.
+    """
+
+    native_value: Any
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a dict representation of the stored value.
+
+        Sensor values here are numbers, strings or ``None``. Anything else is
+        stored as text rather than breaking the state dump.
+        """
+        if self.native_value is None or isinstance(
+            self.native_value, bool | int | float | str
+        ):
+            return {"native_value": self.native_value}
+        return {"native_value": str(self.native_value)}
+
+
+@dataclass
 class TuyaBLESensorMapping:
     """Map a Tuya datapoint to a Home Assistant sensor entity."""
 
     dp_id: int
     description: SensorEntityDescription
     force_add: bool = True
+    restore: bool = False
     dp_type: TuyaBLEDataPointType | None = None
     getter: Callable[[TuyaBLESensor], None] | None = None
     coefficient: float = 1.0
@@ -149,6 +184,7 @@ def _build_sensor_mapping(desc: EntityDescriptor) -> TuyaBLESensorMapping:
         dp_id=desc.dp_id,
         description=_sensor_description(desc),
         force_add=desc.force_add,
+        restore=desc.restore,
         dp_type=(
             TuyaBLEDataPointType(desc.dp_type) if desc.dp_type is not None else None
         ),
@@ -206,7 +242,7 @@ def get_mapping_by_device(device: TuyaBLEDevice) -> list[TuyaBLESensorMapping]:
     return []
 
 
-class TuyaBLESensor(TuyaBLEEntity, SensorEntity):
+class TuyaBLESensor(TuyaBLERestoreEntity, SensorEntity):
     """Representation of a Tuya BLE sensor."""
 
     def __init__(
@@ -219,6 +255,36 @@ class TuyaBLESensor(TuyaBLEEntity, SensorEntity):
     ) -> None:
         super().__init__(hass, coordinator, device, product, sensor_mapping.description)
         self._mapping = sensor_mapping
+        self._attr_restore = sensor_mapping.restore
+
+    @property
+    def dp_id(self) -> int:
+        """Return the data point id this entity reports."""
+        return self._mapping.dp_id
+
+    @property
+    def _restore_dp_id(self) -> int:
+        """Return the data point id whose presence supersedes a restored value."""
+        return self._mapping.dp_id
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData | None:
+        """Return the native value to store for the next run."""
+        return SensorRestoreData(self.native_value)
+
+    async def _async_restore_state(self) -> None:
+        """Apply the value stored by the previous run of Home Assistant."""
+        if (last_data := await self.async_get_last_extra_data()) is None:
+            return
+        native_value = last_data.as_dict().get("native_value")
+        if native_value is None:
+            return
+        self._attr_native_value = native_value
+        _LOGGER.debug(
+            "%s: Restored value for %s",
+            self.device.address,
+            self.entity_description.key,
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -270,7 +336,7 @@ class TuyaBLESensor(TuyaBLEEntity, SensorEntity):
             result = self._mapping.is_available(self, self._product)
         return result
 
-    def set_native_value(self, value: float | int | None) -> None:
+    def set_native_value(self, value: str | float | int | None) -> None:
         """Set the native value of the sensor."""
         self._attr_native_value = value
 
