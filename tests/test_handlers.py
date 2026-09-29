@@ -10,8 +10,6 @@ import pytest
 from custom_components.tuya_ble.device_descriptors import handlers
 from custom_components.tuya_ble.device_descriptors.handlers import (
     battery,
-    co2,
-    ggq,
     raw,
     rssi,
     water_valve,
@@ -113,7 +111,7 @@ def test_resolve_handler_bad_path_raises() -> None:
 def test_resolve_handler_non_callable_raises() -> None:
     """resolve_handler rejects resolved attributes that are not callable."""
     with pytest.raises(TypeError):
-        handlers.resolve_handler("co2._CO2_ALARM_DP_ID")
+        handlers.resolve_handler("battery._BATTERY_ENUM_DP_ID")
 
 
 def test_resolve_handler_module_attribute_exists() -> None:
@@ -155,27 +153,6 @@ def test_battery_enum_missing_datapoint() -> None:
     owner = make_fake_owner({})
     battery.battery_enum(owner)
     assert owner.set_native_value_calls == []
-
-
-def test_co2_alarm_enabled_default_true() -> None:
-    """co2.alarm_enabled defaults to True when the datapoint is absent."""
-    owner = make_fake_owner({})
-    product = TuyaBLEProductInfo(name="CO2")
-    assert co2.alarm_enabled(owner, product)
-
-
-def test_co2_alarm_enabled_true_values() -> None:
-    """co2.alarm_enabled returns True for truthy values."""
-    owner = make_fake_owner({13: make_datapoint(1)})
-    product = TuyaBLEProductInfo(name="CO2")
-    assert co2.alarm_enabled(owner, product)
-
-
-def test_co2_alarm_enabled_false() -> None:
-    """co2.alarm_enabled returns False for a falsy datapoint."""
-    owner = make_fake_owner({13: make_datapoint(0)})
-    product = TuyaBLEProductInfo(name="CO2")
-    assert not co2.alarm_enabled(owner, product)
 
 
 def test_rssi_sensor_sets_signal() -> None:
@@ -310,45 +287,6 @@ def test_water_valve_set_on_unset_dp11_value() -> None:
     })
     water_valve.set_16wgjvck_water_valve(switch, product, True)
     assert switch.sent[0][2][2] == 60
-
-
-# ---- ggq water timer handlers ----
-
-
-def test_ggq_work_state_labels_known_codes() -> None:
-    """work_state maps the captured work codes to readable labels."""
-    for code, label in ggq.WORK_STATES.items():
-        owner = make_fake_owner({})
-        owner.dp_id = 112
-        owner.datapoints[112] = make_datapoint(code)
-        ggq.work_state(owner)
-        assert owner.set_native_value_calls == [label]
-
-
-def test_ggq_work_state_passes_through_unknown_code() -> None:
-    """work_state renders an unknown code as its own decimal string."""
-    owner = make_fake_owner({})
-    owner.dp_id = 113
-    owner.datapoints[113] = make_datapoint(7)
-    ggq.work_state(owner)
-    assert owner.set_native_value_calls == ["7"]
-
-
-def test_ggq_work_state_passes_through_non_int() -> None:
-    """work_state renders a non-integer value as a string."""
-    owner = make_fake_owner({})
-    owner.dp_id = 112
-    owner.datapoints[112] = make_datapoint("auto")
-    ggq.work_state(owner)
-    assert owner.set_native_value_calls == ["auto"]
-
-
-def test_ggq_work_state_missing_datapoint() -> None:
-    """work_state leaves the sensor alone when the data point is absent."""
-    owner = make_fake_owner({})
-    owner.dp_id = 112
-    ggq.work_state(owner)
-    assert owner.set_native_value_calls == []
 
 
 # ---- raw payload handlers ----

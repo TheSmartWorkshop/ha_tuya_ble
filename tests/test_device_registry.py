@@ -56,6 +56,13 @@ def test_get_entity_descriptors_returns_sensor_entities() -> None:
     assert [d.dp_id for d in descriptors] == [1, 2, 15, 18, 19]
 
 
+def test_co2_alarm_sensor_key_is_adopted_from_its_legacy_name() -> None:
+    """The renamed status sensor keeps the unique id of existing entities."""
+    status = get_entity_descriptors("co2bj", "59s19z5m", "sensor")[0]
+    assert status.translation_key == "co2_status"
+    assert status.legacy_keys == ["carbon_dioxide_alarm"]
+
+
 def test_get_entity_descriptors_unknown_product_returns_empty() -> None:
     """Unknown products and categories yield no descriptors."""
     assert get_entity_descriptors("co2bj", "nope", "sensor") == []
@@ -178,7 +185,7 @@ def test_parse_entity_unknown_handler_role_raises() -> None:
             registry,
             {
                 "sensor": [
-                    {"dp_id": 5, "handlers": {"unknown_key": "co2.alarm_enabled"}}
+                    {"dp_id": 5, "handlers": {"unknown_key": "battery.battery_enum"}}
                 ]
             },
         )
@@ -381,7 +388,7 @@ def test_load_skips_schema_and_loads_category_defaults(
         "    - dp_id: 1\n"
         "      translation_key: x\n"
         "      handlers:\n"
-        "        when: co2.alarm_enabled\n",
+        "        when: fingerbot.mode.in_program_mode\n",
         encoding="utf-8",
     )
     registry = DeviceRegistry.load()
@@ -389,7 +396,7 @@ def test_load_skips_schema_and_loads_category_defaults(
     desc = registry.get("ggq", "prod").get("sensor")[0]  # type: ignore[union-attr]
     resolved = desc.resolved_handler("when")
     assert resolved is not None
-    assert resolved.__name__ == "alarm_enabled"
+    assert resolved.__name__ == "in_program_mode"
     assert registry._category_defaults["ggq"]["sensor"][0].dp_id == 9
 
 
@@ -544,3 +551,22 @@ def test_get_mapped_dp_ids_includes_handler_only_specs() -> None:
 def test_get_mapped_dp_ids_includes_water_valve_spec() -> None:
     """The water valve handler's data points count as mapped."""
     assert {1, 10, 11, 13, 15} <= dr.get_mapped_dp_ids("sfkzq", "16wgjvck")
+
+
+def test_sensor_descriptors_never_declare_a_dp_type() -> None:
+    """A sensor's ``dp_type`` is inert, so no descriptor may declare one.
+
+    ``sensor.py`` reads ``dp_type`` only in the ``has_id`` gate deciding
+    whether the entity is created, and that gate is short-circuited because no
+    descriptor sets ``force_add: false``. Enum decoding uses the type the
+    device pushed, not a declared one. ``select`` is the one platform where
+    the field carries meaning: it picks the wire type used to serialise the
+    chosen option.
+    """
+    offenders = [
+        f"{product.category}/{product.product_id} dp_id {desc.dp_id}"
+        for product in get_registry().products.values()
+        for desc in product.get("sensor")
+        if desc.dp_type is not None
+    ]
+    assert offenders == []
