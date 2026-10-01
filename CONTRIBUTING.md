@@ -80,7 +80,7 @@ model_name: 16wgjvck
 
 #### Entity fields (by platform)
 
-**sensor**: `unit` (mapped through the integration's unit table, so both `°C` and `C` work), `state_class`, `device_class`, `options` and `values` for an enum sensor, `coefficient` to divide a raw reading into its real unit, `suggested_display_precision` to choose the number of decimals, `enabled_by_default: false` to hide the entity until enabled, and `restore`. Do **not** set `dp_type` — a sensor decodes whatever type the device pushed, and a test rejects the field.
+**sensor**: `unit` (mapped through the integration's unit table, so both `°C` and `C` work), `state_class`, `device_class`, `options` and `values` for an enum sensor, `coefficient` to divide a raw reading into its real unit, `suggested_display_precision` to choose the number of decimals, `unit_dp_id` to follow a `temperature_unit` select — the sensor then reports in whichever unit the device is set to instead of always declaring `°C` — `enabled_by_default: false` to hide the entity until enabled, and `restore`. Do **not** set `dp_type` — a sensor decodes whatever type the device pushed, and a test rejects the field.
 
 **binary_sensor**: `device_class` only (e.g. `problem`, `motion`, `moisture`). No `unit` or `state_class` — Home Assistant rejects both on a binary sensor. Use `handlers` for anything derived.
 
@@ -92,7 +92,7 @@ model_name: 16wgjvck
 
 **select**: `options` (display values), `values` (raw DP values), and the `dp_type` describing how the selected value is written to the device (`3` for a string table, `4` for enum codes, `2` for a raw value)
 
-**text**: `pattern` (regex validation pattern)
+**text**: `pattern` (regex validation pattern), `min_length` and `max_length` (bounds on the value length, mapped to `native_min`/`native_max`)
 
 **switch**: `bitmap_mask` (binary mask for splitting one bitmap DP into multiple switches — must be YAML `!!binary` bytes, e.g. `AQ==` for `0b00000001`)
 
