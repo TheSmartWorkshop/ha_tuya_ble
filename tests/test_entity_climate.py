@@ -10,6 +10,7 @@ from homeassistant.components.climate.const import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 
 from custom_components.tuya_ble import climate
@@ -330,3 +331,75 @@ async def test_mode_from_value_no_datapoint(hass: HomeAssistant) -> None:
     coordinator.async_set_updated_data({})
     await hass.async_block_till_done()
     assert entity.hvac_mode is None
+
+
+async def test_declared_fahrenheit_without_unit_dp(hass: HomeAssistant) -> None:
+    """A °F descriptor with no unit data point reports °F and its own range."""
+    device, coordinator, product = build_context(hass)
+    mapping = climate.TuyaBLEClimateMapping(
+        description=ClimateEntityDescription(key="trv"),
+        temperature_unit=UnitOfTemperature.FAHRENHEIT,
+        target_temperature_dp_id=2,
+        target_temperature_min=40,
+        target_temperature_max=90,
+    )
+    entity = climate.TuyaBLEClimate(hass, coordinator, device, product, mapping)
+    entity.hass = hass
+    assert entity._uses_fahrenheit
+    assert entity.temperature_unit == UnitOfTemperature.FAHRENHEIT
+    assert (entity.min_temp, entity.max_temp) == (40, 90)
+
+
+async def test_unit_dp_without_fahrenheit_pair(hass: HomeAssistant) -> None:
+    """With one shared pair, the unit data point only changes the reported unit."""
+    device, coordinator, product = build_context(hass)
+    mapping = climate.TuyaBLEClimateMapping(
+        description=ClimateEntityDescription(key="trv"),
+        temperature_unit_dp_id=9,
+        current_temperature_dp_id=1,
+        target_temperature_dp_id=2,
+        target_temperature_min=5,
+        target_temperature_max=30,
+    )
+    entity = climate.TuyaBLEClimate(hass, coordinator, device, product, mapping)
+    entity.hass = hass
+    await entity.async_added_to_hass()
+    add_dp(device, 9, TuyaBLEDataPointType.DT_ENUM, 1)
+    add_dp(device, 1, TuyaBLEDataPointType.DT_VALUE, 70)
+    add_dp(device, 2, TuyaBLEDataPointType.DT_VALUE, 68)
+    coordinator.async_set_updated_data({})
+    await hass.async_block_till_done()
+    assert entity.temperature_unit == UnitOfTemperature.FAHRENHEIT
+    # No °F range is declared, so the °C range is kept as it was.
+    assert (entity.min_temp, entity.max_temp) == (5, 30)
+    assert entity.current_temperature == 70
+    assert entity.target_temperature == 68
+    await entity.async_set_temperature(temperature=66.0)
+    await hass.async_block_till_done()
+    datapoint = device.datapoints[2]
+    assert datapoint is not None
+    assert datapoint.value == 66
+
+
+async def test_unit_dp_with_non_integer_value(hass: HomeAssistant) -> None:
+    """A unit data point that is not an integer falls back to the declared unit."""
+    device, coordinator, product = build_context(hass)
+    mapping = climate.TuyaBLEClimateMapping(
+        description=ClimateEntityDescription(key="trv"),
+        temperature_unit_dp_id=9,
+        target_temperature_dp_id=2,
+    )
+    entity = climate.TuyaBLEClimate(hass, coordinator, device, product, mapping)
+    add_dp(device, 9, TuyaBLEDataPointType.DT_STRING, "f")
+    assert not entity._uses_fahrenheit
+
+
+async def test_hvac_action_heat_without_readings(hass: HomeAssistant) -> None:
+    """A heating device with no readings yet is reported as heating."""
+    device, coordinator, product = build_context(hass)
+    entity = _make_switch_entity(hass, device, coordinator, product)
+    await entity.async_added_to_hass()
+    add_dp(device, 101, TuyaBLEDataPointType.DT_BOOL, True)
+    coordinator.async_set_updated_data({})
+    await hass.async_block_till_done()
+    assert entity.hvac_action == HVACAction.HEATING

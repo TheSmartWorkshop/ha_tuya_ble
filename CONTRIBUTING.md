@@ -96,7 +96,9 @@ model_name: 16wgjvck
 
 **switch**: `bitmap_mask` (binary mask for splitting one bitmap DP into multiple switches — must be YAML `!!binary` bytes, e.g. `AQ==` for `0b00000001`)
 
-**climate**: `hvac_mode_dp_id`, `hvac_switch_dp_id`, `hvac_switch_mode`, `hvac_modes`, `current_temperature_dp_id`, `current_temperature_coefficient`, `target_temperature_dp_id`, `target_temperature_coefficient`, `target_temperature_step`, `target_temperature_min`, `target_temperature_max`, `temperature_unit`, `current_humidity_dp_id`, `current_humidity_coefficient`, `target_humidity_dp_id`, `target_humidity_coefficient`, `target_humidity_min`, `target_humidity_max`, `preset_mode_dp_ids`
+**climate**: `hvac_mode_dp_id`, `hvac_switch_dp_id`, `hvac_switch_mode`, `hvac_modes`, `current_temperature_dp_id`, `current_temperature_coefficient`, `target_temperature_dp_id`, `target_temperature_coefficient`, `target_temperature_step`, `target_temperature_min`, `target_temperature_max`, `temperature_unit`, `temperature_unit_dp_id`, `fahrenheit_current_temperature_dp_id`, `fahrenheit_target_temperature_dp_id`, `fahrenheit_target_temperature_min`, `fahrenheit_target_temperature_max`, `current_humidity_dp_id`, `current_humidity_coefficient`, `target_humidity_dp_id`, `target_humidity_coefficient`, `target_humidity_min`, `target_humidity_max`, `preset_mode_dp_ids`
+
+`temperature_unit_dp_id` points the climate entity at a `temperature_unit` select (0 = °C, anything else = °F): the entity then reports that unit and, for devices that keep a separate data point pair per unit, reads and writes the `fahrenheit_*` data points and range while °F is selected. Without the `fahrenheit_*` fields the same data points are read in either unit.
 
 **cover**: `state_dp_id`, `position_set_dp_id`, `position_dp_id`, `tilt_dp_id`
 

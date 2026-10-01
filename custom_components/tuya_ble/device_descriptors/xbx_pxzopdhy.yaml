@@ -1,0 +1,63 @@
+category: xbx
+product_id: pxzopdhy
+manufacturer: EUHOMY
+# The cloud schema for this product is empty, so every data point below was
+# mapped by hand from the panel. 102 (bool), 123 (value, always 100) and
+# 124 (bool) are reported but their meaning is unknown, so they stay unmapped.
+#
+# The fridge keeps a separate °C and °F data point pair and only updates the
+# pair DP 105 selects; the other pair keeps its last value, and the °C pair is
+# not reported at all until the unit has been set to °C once.
+entities:
+  climate:
+    - translation_key: car_fridge
+      name: Fridge
+      icon: mdi:fridge-outline
+      hvac_switch_dp_id: 101
+      hvac_switch_mode: cool
+      hvac_modes:
+        - "off"
+        - cool
+      temperature_unit_dp_id: 105
+      current_temperature_dp_id: 112
+      target_temperature_dp_id: 114
+      target_temperature_min: -20
+      target_temperature_max: 20
+      target_temperature_step: 1
+      fahrenheit_current_temperature_dp_id: 117
+      fahrenheit_target_temperature_dp_id: 119
+      fahrenheit_target_temperature_min: -4
+      fahrenheit_target_temperature_max: 68
+  select:
+    - dp_id: 103
+      translation_key: fridge_mode
+      name: Mode
+      icon: mdi:snowflake
+      options:
+        - Max
+        - Eco
+    - dp_id: 104
+      translation_key: battery_protection
+      name: Battery protection
+      icon: mdi:car-battery
+      entity_category: config
+      options:
+        - Low
+        - Medium
+        - High
+    - dp_id: 105
+      translation_key: temperature_unit
+      options:
+        - °C
+        - °F
+  sensor:
+    - dp_id: 122
+      translation_key: supply_voltage
+      name: Supply voltage
+      device_class: voltage
+      unit: V
+      coefficient: 10
+      state_class: measurement
+      suggested_display_precision: 1
+device_name: EUHOMY CF008 Car Fridge
+model_name: CF008-23BL/30BL

@@ -45,6 +45,10 @@ Supports lock/unlock, alarm events, fingerprint/card/password unlock tracking, a
 
 - Thermostatic Radiator Valve (product_ids `drlajpqc`, `nhj2j7su`, `zmachryv`). Supports temperature set, modes, and calibration. Additional switches: window check, antifreeze, child lock, water scale proof, programming mode.
 
+## Car fridges (category_id `xbx`)
+
+- EUHOMY CF008-23BL / CF008-30BL car fridge (product_id `pxzopdhy`). Climate entity (off/cool, current and target temperature), Mode (Max/Eco), Battery protection (Low/Medium/High) and Temperature unit selects, and a supply voltage sensor. The fridge keeps separate °C and °F temperature data points; the climate entity reads and writes the pair the Temperature unit select chooses and reports that unit.
+
 ## Smart water bottle (category_id `znhsb`)
 
 - Smart water bottle (product_id `cdlandip`).

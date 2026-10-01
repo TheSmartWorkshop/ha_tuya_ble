@@ -34,6 +34,7 @@ is how most of the categories below got their first device.
 | `co2bj`   | CO2 detector                               |                                                                                                                                                                                                                     |
 | `dd`      | Strip lights                               | Strip lights. `_category_dd.yaml` supplies the default `light` entity for every `dd` product that does not define its own.                                                                                          |
 | `znhsb`   | Smart glass (not in Tuya's list)           | Officially _Smart glass_, but the `cdlandip` product here is a smart water bottle. See [gotchas](#gotchas).                                                                                                         |
+| `xbx`     | _not in Tuya's list_                       | Not in Tuya's published list. Car fridges (EUHOMY CF008); its cloud schema is empty, so the descriptor defines every data point. Not the `bx` Refrigerator code.                                                    |
 
 To see the products in a category:
 
@@ -56,8 +57,8 @@ These turn up in log lines and issue reports but are not categories with descrip
 
 The 138 category codes in Tuya's developer documentation, for reading a log line or a
 cloud response. Ones marked _undocumented_ are absent from that documentation but are known
-from shipped devices. ✓ marks the 12 of the 14 categories this integration supports that
-appear in Tuya's list. The other two, `dcb` and `znhsb`, are not in Tuya's documentation at
+from shipped devices. ✓ marks the 12 of the 15 categories this integration supports that
+appear in Tuya's list. The other three, `dcb`, `xbx` and `znhsb`, are not in Tuya's documentation at
 all, so they have no row here — they are in the table above.
 
 | Category      | Official name                                                      | Used here |
