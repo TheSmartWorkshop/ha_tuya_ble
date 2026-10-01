@@ -165,6 +165,7 @@ The integration supports a broad range of Tuya BLE devices across the following 
 | Smart locks (`ms`, `jtmspro`)            | Smart locks, cylinder locks, Raycube K7 Pro+, CentralAcesso               |
 | Climate (`wk`)                           | Thermostatic radiator valves (TRV)                                        |
 | Irrigation & water (`ggq`, `sfkzq`)      | Irrigation computers, water valves, dual water timers                     |
+| Car fridges (`xbx`)                      | EUHOMY CF008 car fridge                                                   |
 | Smart water bottle (`znhsb`)             | Smart water bottles                                                       |
 | PARKSIDE batteries (`dcb`)               | Smart batteries 4Ah / 8Ah                                                 |
 | Lights (`dd`)                            | LED strip lights, floor/sunset lamps                                      |

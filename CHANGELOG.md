@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [Unreleased]
+
+### Added
+
+- **EUHOMY CF008 car fridge** (`xbx/pxzopdhy`, CF008-23BL / CF008-30BL): climate entity (off/cool on DP 101), Mode (Max/Eco), Battery protection (Low/Medium/High) and Temperature unit selects, and a supply voltage sensor. The cloud schema is empty, so the descriptor defines every data point. DPs 102, 123 and 124 stay unmapped until their meaning is known.
+- **Climate entities that follow a temperature unit select**: the new `temperature_unit_dp_id` descriptor field makes a climate entity report the unit the device is set to. Devices that keep a separate °C and °F data point pair name the °F pair and range with the `fahrenheit_*` fields; the entity reads and writes the pair the unit selects, and an unreported pair reads as unknown rather than showing the stale values of the other unit.
+
+### Changed
+
+- **Climate HVAC action for cooling devices**: a climate entity in `cool` mode now reports `cooling`, or `idle` once the current temperature is at or below the target, instead of always reporting `heating`.
+- **Climate set point rounding**: the target temperature is rounded to the device's resolution instead of truncated, so a set point converted from another unit (2 °C is 35.6 °F) lands on the nearest step.
+
 ## [2.3.0] - 2026-10-01
 
 ### Changed

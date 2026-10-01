@@ -766,12 +766,27 @@ def test_sensor_falls_back_to_declared_unit_for_non_int_select(
 
 
 def test_descriptors_with_unit_select_wire_the_sensor() -> None:
-    """Every descriptor exposing temperature_unit must wire the sensor to it."""
+    """Every descriptor exposing temperature_unit must wire its readings to it.
+
+    The reading is either a temperature sensor following the select through
+    ``unit_dp_id``, or a climate entity following it through
+    ``temperature_unit_dp_id``.
+    """
     registry = get_registry()
 
     for (category, product_id), entities in registry.products.items():
         unit_dp_id = entities.dp_id_for("select", "temperature_unit")
         if unit_dp_id is None:
+            continue
+        climates = entities.get("climate")
+        if climates:
+            assert all(
+                climate_desc.extra.get("temperature_unit_dp_id") == unit_dp_id
+                for climate_desc in climates
+            ), (
+                f"{category}/{product_id} climate does not follow its "
+                "temperature_unit select"
+            )
             continue
         temperature = next(
             (
